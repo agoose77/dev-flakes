@@ -22,13 +22,13 @@
             cmake
             ninja
             gcc
-	    pre-commit
+            pre-commit
           ]);
           runScript = "${pkgs.writeShellScriptBin "runScript" (''
-              set -e
-              test -d .venv || ${pkgs.python3.interpreter} -m venv .venv
-	      source .venv/bin/activate
-	      set +e
+                     set -e
+                     test -d .venv || ${pkgs.python3.interpreter} -m venv .venv
+              source .venv/bin/activate
+              set +e
             ''
             + script)}/bin/runScript";
         })
