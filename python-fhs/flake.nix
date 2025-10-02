@@ -30,22 +30,24 @@
           runScript = "${pkgs.writeShellScriptBin "runScript" (''
               set -e
 
+              __hash=$(echo ${python.interpreter} | sha256sum)
+  
               # Setup if not defined ####
-              if [[ ! -f ".venv/marker" ]]; then
+              if [[ ! -f ".venv/$__hash" ]]; then
                   __setup_env() {
                       # Remove existing venv
                       if [[ -d .venv ]]; then
                           rm -r .venv
                       fi
-
+  
                       # Stand up new venv
                       ${python.interpreter} -m venv .venv
-
+  
                       # Add a marker that marks this venv as "ready"
-                      touch .venv/marker
+                      touch ".venv/$__hash"
                   }
-
-                  __setup_env
+  
+                __setup_env
               fi
               ###########################
 
