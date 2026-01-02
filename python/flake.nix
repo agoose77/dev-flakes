@@ -71,7 +71,9 @@
           envWithScript pkgs.python312;
         py313 =
           envWithScript pkgs.python313;
-        default = py313;
+        py314 =
+          envWithScript pkgs.python314;
+        default = py314;
       };
     });
 }
