@@ -2,16 +2,21 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
   };
-  outputs = {nixpkgs}: let
+  outputs = {
+    self,
+    nixpkgs,
+  }: let
     forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
   in {
     devShells = forAllSystems (system: let
       pkgs = import nixpkgs {inherit system;};
+      inherit (pkgs) lib;
+
       mkInterpreter = {
         python,
         pythonPackages,
       }:
-        (pkgs.buildFHSUserEnv {
+        (pkgs.buildFHSEnv {
           name = "python-env";
           targetPkgs = pkgs:
             (with pkgs; [
@@ -21,7 +26,7 @@
               gcc
               pre-commit
             ])
-            ++ [python] ++ (with pythonPackages; [pip virtualenv]);
+            ++ [python] ++ (with pythonPackages; [pip]);
           runScript = "${pkgs.writeShellScriptBin "runScript" ''
             set -e
 
@@ -49,7 +54,7 @@
             source .venv/bin/activate
             set +e
 
-            ${pkgs.bash}
+            exec ${lib.getExe pkgs.bash} "$@"
           ''}/bin/runScript";
         })
         .env;
