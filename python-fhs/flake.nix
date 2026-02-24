@@ -1,15 +1,11 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
   };
-  outputs = inputs @ {
-    self,
-    nixpkgs,
-    flake-utils,
-    ...
-  }:
-    flake-utils.lib.eachDefaultSystem (system: let
+  outputs = {nixpkgs}: let
+    forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+  in {
+    devShells = forAllSystems (system: let
       pkgs = import nixpkgs {inherit system;};
       mkInterpreter = {
         python,
@@ -57,29 +53,28 @@
           ''}/bin/runScript";
         })
         .env;
-    in {
-      devShells = rec {
-        py310 = mkInterpreter {
-          python = pkgs.python310;
-          pythonPackages = pkgs.python310Packages;
-        };
-        py311 = mkInterpreter {
-          python = pkgs.python311;
-          pythonPackages = pkgs.python311Packages;
-        };
-        py312 = mkInterpreter {
-          python = pkgs.python312;
-          pythonPackages = pkgs.python312Packages;
-        };
-        py313 = mkInterpreter {
-          python = pkgs.python313;
-          pythonPackages = pkgs.python313Packages;
-        };
-        py314 = mkInterpreter {
-          python = pkgs.python314;
-          pythonPackages = pkgs.python314Packages;
-        };
-        default = py314;
+    in rec {
+      py310 = mkInterpreter {
+        python = pkgs.python310;
+        pythonPackages = pkgs.python310Packages;
       };
+      py311 = mkInterpreter {
+        python = pkgs.python311;
+        pythonPackages = pkgs.python311Packages;
+      };
+      py312 = mkInterpreter {
+        python = pkgs.python312;
+        pythonPackages = pkgs.python312Packages;
+      };
+      py313 = mkInterpreter {
+        python = pkgs.python313;
+        pythonPackages = pkgs.python313Packages;
+      };
+      py314 = mkInterpreter {
+        python = pkgs.python314;
+        pythonPackages = pkgs.python314Packages;
+      };
+      default = py314;
     });
+  };
 }

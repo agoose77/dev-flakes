@@ -1,14 +1,14 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     self,
     nixpkgs,
-    flake-utils,
-  }:
-    flake-utils.lib.eachDefaultSystem (system: let
+  }: let
+    forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+  in {
+    devShells = forAllSystems (system: let
       pkgs = import nixpkgs {inherit system;};
       inherit (pkgs) lib;
 
@@ -61,19 +61,18 @@
             inherit env packages shellHook;
           }
       );
-    in {
-      devShells = rec {
-        py310 =
-          envWithScript pkgs.python310;
-        py311 =
-          envWithScript pkgs.python311;
-        py312 =
-          envWithScript pkgs.python312;
-        py313 =
-          envWithScript pkgs.python313;
-        py314 =
-          envWithScript pkgs.python314;
-        default = py314;
-      };
+    in rec {
+      py310 =
+        envWithScript pkgs.python310;
+      py311 =
+        envWithScript pkgs.python311;
+      py312 =
+        envWithScript pkgs.python312;
+      py313 =
+        envWithScript pkgs.python313;
+      py314 =
+        envWithScript pkgs.python314;
+      default = py314;
     });
+  };
 }
