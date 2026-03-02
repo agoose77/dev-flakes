@@ -45,10 +45,16 @@
           in {
             name = name;
             value = pkgs.mkShell {
-              packages = [
-                python
-                venvHook
-              ];
+              packages =
+                [
+                  python
+                  venvHook
+                ]
+                ++ (with pkgs; [
+                  cmake
+                  ninja
+                  gcc
+                ]);
               venvDir = ".venv";
 
               # Drop bad env vars on activation
