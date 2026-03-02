@@ -7,6 +7,7 @@
     nixpkgs,
   }: let
     forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
+    interpreters = ["python310" "python311" "python312" "python313" "python314"];
   in {
     packages = forAllSystems (system: let
       pkgs = import nixpkgs {inherit system;};
@@ -30,8 +31,6 @@
       system: let
         pkgs = import nixpkgs {inherit system;};
         inherit (pkgs) lib;
-
-        interpreters = ["python310" "python311" "python312" "python313" "python314"];
 
         devShells = lib.listToAttrs (lib.map
           (name: let
