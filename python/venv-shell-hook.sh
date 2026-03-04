@@ -1,7 +1,7 @@
 # This file is mostly copied from https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/interpreters/python/hooks/venv-shell-hook.sh
 # But modified to use a different venv mechanism
 _createVenv() {
-  local venvPath="$1";
+  local venvPath="$(realpath "$1")";
 
   if [[ -z "$venvPath" ]]; then
     echo "Missing venv arg" >> /dev/stderr
