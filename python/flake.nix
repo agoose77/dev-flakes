@@ -12,19 +12,39 @@
     packages = forAllSystems (system: let
       pkgs = import nixpkgs {inherit system;};
 
-      manyLinux = pkgs.pythonManylinuxPackages.manylinux2014;
       inherit (pkgs) lib;
     in {
-      nix-ld-venv-hook = lib.makeOverridable ({python}:
+      # Binary that creates venvs
+      # The resulting Python interpreter uses nix-ld and pre-sets the NIX_LD_LIBRARY_PATH to the manylinux packages
+      create-nix-ld-venv = let
+        script = python:
+        # Inject useful variables into venv-create script
+          pkgs.replaceVarsWith {
+            src = ./create-nix-ld-venv.sh;
+            replacements = {
+              python = python.interpreter;
+              patchelf = lib.getExe pkgs.patchelf;
+              bash = lib.getExe pkgs.bash;
+              linkerPath = lib.getExe' pkgs.nix-ld "nix-ld";
+              baseLinkerPath = pkgs.stdenv.cc.bintools.dynamicLinker;
+              libraryPath = lib.makeLibraryPath pkgs.pythonManylinuxPackages.manylinux2014;
+            };
+            isExecutable = true;
+          };
+      in
+        lib.makeOverridable ({python}:
+          pkgs.writeShellApplication {
+            name = "create-nix-ld-venv";
+            text = "exec ${script python} \"$@\"";
+          }) {python = pkgs.python3;};
+
+      # Hook that creates venvs using create-nix-ld-venv
+      nix-ld-venv-hook = lib.makeOverridable ({python}: let
+        create-venv = self.packages.${system}.create-nix-ld-venv.override {inherit python;};
+      in
         pkgs.makeSetupHook {
           name = "nix-ld-venv-hook";
-          propagatedBuildInputs = [pkgs.patchelf pkgs.makeBinaryWrapper];
-          substitutions = {
-            pythonInterpreter = python.interpreter;
-            linkerPath = lib.getExe' pkgs.nix-ld "nix-ld";
-            baseLinkerPath = pkgs.stdenv.cc.bintools.dynamicLinker;
-            libraryPath = lib.makeLibraryPath manyLinux;
-          };
+          propagatedBuildInputs = [create-venv];
         } (./venv-shell-hook.sh)) {python = pkgs.python3;};
     });
     devShells = forAllSystems (
@@ -35,7 +55,11 @@
         devShells = lib.listToAttrs (lib.map
           (name: let
             python = lib.getAttr name pkgs;
-            venvHook = self.packages.${system}.nix-ld-venv-hook.override {inherit python;};
+
+            packages = self.packages.${system};
+            venvHook = packages.nix-ld-venv-hook.override {inherit python;};
+            createVenv = packages.create-nix-ld-venv.override {inherit python;};
+
             # Unset these unwanted env vars
             # PYTHONPATH bleeds from Nix Python packages
             unwantedEnvPreamble = ''
@@ -48,6 +72,7 @@
                 [
                   python
                   venvHook
+                  createVenv
                 ]
                 ++ (with pkgs; [
                   cmake
