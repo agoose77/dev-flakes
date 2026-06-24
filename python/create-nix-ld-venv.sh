@@ -15,13 +15,12 @@ executablePath="$venvPath/bin/$interpreterName"
 
 # Replace symlink binary with copy
 rm "$executablePath"
-cp "@pythonInterpreter@" "$executablePath"
+cp "@python@" "$executablePath"
 chmod 755 "$executablePath"
 
 # Patch interpreter to use nix-ld linker
 "@patchelf@" --set-interpreter "@linkerPath@" "$executablePath"
 
-exit 0
 # Move patched interpreter to hidden path
 hiddenPath="$(dirname "$executablePath")/.$(basename "$executablePath")"-wrapped
 mv "$executablePath" "$hiddenPath"
