@@ -46,57 +46,55 @@
           propagatedBuildInputs = [create-venv];
         } (./venv-shell-hook.sh)) {python = pkgs.python3;};
     });
-    devShells =
-      forAllSystems (
-        system: let
-          pkgs = import nixpkgs {inherit system;};
-          inherit (pkgs) lib;
-          interpreters = builtins.filter (x: (builtins.match "python[0-9]{2,
-}.*" x) != null) (builtins.attrNames pkgs.pythonInterpreters);
+    devShells = forAllSystems (
+      system: let
+        pkgs = import nixpkgs {inherit system;};
+        inherit (pkgs) lib;
+        interpreters = builtins.filter (x: (builtins.match "python[0-9]{2,}.*" x) != null) (builtins.attrNames pkgs.pythonInterpreters);
 
-          devShells = lib.listToAttrs (lib.map
-            (name: let
-              python = lib.getAttr name pkgs;
+        devShells = lib.listToAttrs (lib.map
+          (name: let
+            python = lib.getAttr name pkgs;
 
-              packages = self.packages.${system};
-              venvHook = packages.nix-ld-venv-hook.override {inherit python;};
-              createVenv = packages.create-nix-ld-venv.override {inherit python;};
+            packages = self.packages.${system};
+            venvHook = packages.nix-ld-venv-hook.override {inherit python;};
+            createVenv = packages.create-nix-ld-venv.override {inherit python;};
 
-              # Unset these unwanted env vars
-              # PYTHONPATH bleeds from Nix Python packages
-              unwantedEnvPreamble = ''
-                unset SOURCE_DATE_EPOCH PYTHONPATH
-              '';
-            in {
-              name = name;
-              value = pkgs.mkShell {
-                packages =
-                  [
-                    python
-                    venvHook
-                    createVenv
-                  ]
-                  ++ (with pkgs; [
-                    cmake
-                    ninja
-                    gcc
-                  ]);
-                venvDir = ".venv";
+            # Unset these unwanted env vars
+            # PYTHONPATH bleeds from Nix Python packages
+            unwantedEnvPreamble = ''
+              unset SOURCE_DATE_EPOCH PYTHONPATH
+            '';
+          in {
+            name = name;
+            value = pkgs.mkShell {
+              packages =
+                [
+                  python
+                  venvHook
+                  createVenv
+                ]
+                ++ (with pkgs; [
+                  cmake
+                  ninja
+                  gcc
+                ]);
+              venvDir = ".venv";
 
-                # Drop bad env vars on activation
-                postShellHook = unwantedEnvPreamble;
+              # Drop bad env vars on activation
+              postShellHook = unwantedEnvPreamble;
 
-                # Setup venv by patching interpreter with LD_LIBRARY_PATH
-                # This is required because ld does not exist on Nix systems
-                postVenvCreation = unwantedEnvPreamble;
-              };
-            })
-            interpreters);
-        in
-          devShells
-          //
-          # Set last interpreter as default
-          {default = lib.getAttr (lib.lists.last interpreters) devShells;}
-      );
+              # Setup venv by patching interpreter with LD_LIBRARY_PATH
+              # This is required because ld does not exist on Nix systems
+              postVenvCreation = unwantedEnvPreamble;
+            };
+          })
+          interpreters);
+      in
+        devShells
+        //
+        # Set last interpreter as default
+        {default = lib.getAttr (lib.lists.last interpreters) devShells;}
+    );
   };
 }
