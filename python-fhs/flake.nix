@@ -7,68 +7,71 @@
     nixpkgs,
   }: let
     forAllSystems = nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed;
-    interpreters = ["python310" "python311" "python312" "python313" "python314"];
   in {
-    devShells = forAllSystems (
-      system: let
-        pkgs = import nixpkgs {inherit system;};
-        inherit (pkgs) lib;
+    devShells =
+      forAllSystems (
+        system: let
+          pkgs = import nixpkgs {inherit system;};
+          inherit (pkgs) lib;
 
-        devShells = lib.listToAttrs (lib.map
-          (name: let
-            python = lib.getAttr name pkgs;
-          in {
-            inherit name;
-            value =
-              (pkgs.buildFHSEnv
-                {
-                  name = "python-env";
-                  targetPkgs = pkgs:
-                    (with pkgs; [
-                      pythonManylinuxPackages.manylinux2014Package
-                      cmake
-                      ninja
-                      gcc
-                      pre-commit
-                    ])
-                    ++ [python];
-                  runScript = "${pkgs.writeShellScriptBin "runScript" ''
-                    set -e
+          interpreters = builtins.filter (x: (builtins.match "python[0-9]{2,
+}.*" x) != null) (builtins.attrNames pkgs.pythonInterpreters);
 
-                    __hash=$(echo ${python.interpreter} | sha256sum)
+          devShells = lib.listToAttrs (lib.map
+            (name: let
+              python = lib.getAttr name pkgs;
+            in {
+              inherit name;
+              value =
+                (pkgs.buildFHSEnv
+                  {
+                    name = "python-env";
+                    targetPkgs = pkgs:
+                      (with pkgs; [
+                        pythonManylinuxPackages.manylinux2014Package
+                        cmake
+                        ninja
+                        gcc
+                        pre-commit
+                      ])
+                      ++ [python];
+                    runScript = "${pkgs.writeShellScriptBin "runScript" ''
+                      set -e
 
-                    # Setup if not defined ####
-                    if [[ ! -f ".venv/$__hash" ]]; then
-                        __setup_env() {
-                            # Remove existing venv
-                            if [[ -d .venv ]]; then
-                                rm -r .venv
-                            fi
+                      __hash=$(echo ${python.interpreter} | sha256sum)
 
-                            # Stand up new venv
-                            ${python.interpreter} -m venv .venv
+                      # Setup if not defined ####
+                      if [[ ! -f ".venv/$__hash" ]]; then
+                          __setup_env() {
+                              # Remove existing venv
+                              if [[ -d .venv ]]; then
+                                  rm -r .venv
+                              fi
 
-                            # Add a marker that marks this venv as "ready"
-                            touch ".venv/$__hash"
-                        }
+                              # Stand up new venv
+                              ${python.interpreter} -m venv .venv
 
-                      __setup_env
-                    fi
-                    ###########################
+                              # Add a marker that marks this venv as "ready"
+                              touch ".venv/$__hash"
+                          }
 
-                    source .venv/bin/activate
-                    set +e
+                        __setup_env
+                      fi
+                      ###########################
 
-                    exec ${lib.getExe pkgs.bash} "$@"
-                  ''}/bin/runScript";
-                }).env;
-          })
-          interpreters);
-      in
-        devShells
-        //
-        # Set last interpreter as default
-        {default = lib.getAttr (lib.lists.last interpreters) devShells;}
-    );
+                      source .venv/bin/activate
+                      set +e
+
+                      exec ${lib.getExe pkgs.bash} "$@"
+                    ''}/bin/runScript";
+                  }).env;
+            })
+            interpreters);
+        in
+          devShells
+          //
+          # Set last interpreter as default
+          {default = lib.getAttr (lib.lists.last interpreters) devShells;}
+      );
   };
 }
