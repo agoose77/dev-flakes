@@ -22,13 +22,14 @@ chmod 755 "$executablePath"
 "@patchelf@" --set-interpreter "@linkerPath@" "$executablePath"
 
 # Move patched interpreter to hidden path
-hiddenPath="$(dirname "$executablePath")/.$(basename "$executablePath")"-wrapped
+name=$(basename "$executablePath")
+hiddenPath="$(dirname "$executablePath")/.${name}"-wrapped
 mv "$executablePath" "$hiddenPath"
 
 # Create shim that invokes Python with vars
 cat <<-EOF > "$executablePath"
 #!@bash@
 export NIX_LD_LIBRARY_PATH="@libraryPath@" NIX_LD="@baseLinkerPath@"
-exec -a "$0" "$hiddenPath" "\$@"
+exec -a "${name}" "$hiddenPath" "\$@"
 EOF
 chmod 755 "$executablePath"
